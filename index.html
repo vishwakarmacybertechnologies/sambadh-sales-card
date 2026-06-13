@@ -115,10 +115,9 @@
         });
 
         // Grey (Gray) કિનારીઓ
-        const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.4 }); // આ બ્લેક થશે
-const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTexture, roughness: 0.4 }); // ટેક્સચર નોર્મલ રહેશે
-const backMaterial = new THREE.MeshStandardMaterial({ map: backTexture, roughness: 0.4 });  // ટેક્સચર નોર્મલ રહેશે
-
+        const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.4 });
+        const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTexture, roughness: 0.4 });
+        const backMaterial = new THREE.MeshStandardMaterial({ map: backTexture, roughness: 0.4 });
 
 
         const materials = [
