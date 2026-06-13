@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Visiting Card</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #d8d6d3; 
+            overflow: hidden; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none; /* મોબાઈલમાં એકસ્ટ્રા સ્ક્રોલિંગ અટકાવવા */
+        }
+        canvas {
+            display: block;
+            cursor: grab;
+            outline: none;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+        
+        /* --- એકદમ સ્ટાઇલિશ ગ્લાસ-મોર્ડન ઇન્ડિકેટર --- */
+        #rotate-indicator {
+            position: absolute;
+            bottom: 40px;
+            /* Premium Glassmorphism Effect */
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            
+            padding: 12px 24px;
+            border-radius: 50px;
+            color: #222;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: none; 
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+            transform: translateY(0);
+            z-index: 10;
+        }
+        
+        /* જ્યારે ગાયબ થાય ત્યારે થોડું નીચે પણ જશે */
+        #rotate-indicator.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        
+        .icon {
+            font-size: 20px;
+            display: inline-block;
+            animation: spin 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* મોબાઈલ માટે ઇન્ડિકેટરની સાઈઝ નાની કરવા */
+        @media (max-width: 600px) {
+            #rotate-indicator {
+                bottom: 30px;
+                padding: 10px 20px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="rotate-indicator">
+        <span class="icon">↻</span> Swipe to Rotate 360°
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); /* સ્પીડ વધારવા પિક્સલ રેશિયો ઓપ્ટિમાઇઝ કર્યો */
+        document.body.appendChild(renderer.domElement);
+
+        const geometry = new THREE.BoxGeometry(3.5, 2.0, 0.05);
+
+        const textureLoader = new THREE.TextureLoader();
+        const frontTexture = textureLoader.load('front.jpg'); 
+
+        // *** GUARANTEED FLIP FIX ***
+        const backTexture = textureLoader.load('back.jpg', function(tex) {
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.repeat.x = -1; 
+            tex.offset.x = 1;  
+            tex.needsUpdate = true; 
+        });
+
+        // Grey (Gray) કિનારીઓ
+        const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.4 }); // આ બ્લેક થશે
+const frontMaterial = new THREE.MeshStandardMaterial({ map: frontTexture, roughness: 0.4 }); // ટેક્સચર નોર્મલ રહેશે
+const backMaterial = new THREE.MeshStandardMaterial({ map: backTexture, roughness: 0.4 });  // ટેક્સચર નોર્મલ રહેશે
+
+
+
+        const materials = [
+            edgeMaterial,  
+            edgeMaterial,  
+            edgeMaterial,  
+            edgeMaterial,  
+            frontMaterial, 
+            backMaterial   
+        ];
+
+        const card = new THREE.Mesh(geometry, materials);
+        scene.add(card);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); 
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; 
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = true;
+        // કાર્ડને સ્ક્રીનની બહાર જતા અટકાવવા માટે ઝૂમ લિમિટ
+        controls.minDistance = 3; 
+        controls.maxDistance = 15;
+        controls.target.set(0, 0, 0);
+
+        // --- 🚀 RESPONSIVE CAMERA LOGIC ---
+        function adjustCamera() {
+            const width = window.innerWidth;
+            if (width < 600) {
+                camera.position.z = 8; // મોબાઈલ માટે કેમેરો પાછળ ખેંચ્યો
+            } else if (width < 1024) {
+                camera.position.z = 6.5; // ટેબલેટ માટે
+            } else {
+                camera.position.z = 5; // ડેસ્કટોપ/લેપટોપ માટે
+            }
+        }
+        
+        // પેજ લોડ થતા જ કેમેરા સેટ કરો
+        adjustCamera();
+
+        // --- ઇન્ડિકેટરને હાઇડ અને શો (Hide & Show) કરવા માટેનું લોજીક ---
+        const indicator = document.getElementById('rotate-indicator');
+
+        controls.addEventListener('start', () => {
+            indicator.classList.add('hidden');
+        });
+
+        controls.addEventListener('end', () => {
+            indicator.classList.remove('hidden');
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // જ્યારે પણ સ્ક્રીન નાની-મોટી થાય ત્યારે ઓટો અપડેટ
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            adjustCamera(); // રિસાઈઝ વખતે પણ કેમેરાનું અંતર સુધારો
+        });
+    </script>
+</body>
+</html>
